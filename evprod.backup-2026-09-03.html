@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV-Prod</title>
+<link rel="stylesheet" href="vendor/tailadmin-build.css">
+<link rel="stylesheet" href="assets/tokens.css">
+
+</head>
+<body>
+<div class="shell">
+<nav class="sidebar" id="sidebar">
+  <div class="brand">EV<span>-</span>Prod</div>
+  <button class="navlink" data-nav="dashboard"><span class="ico">◧</span> Dashboard</button>
+  <button class="navlink" data-nav="event"><span class="ico">⚡</span> Event Mode</button>
+  <div class="navsep">Catalog</div>
+  <button class="navlink" data-nav="items"><span class="ico">▦</span> Items</button>
+  <button class="navlink" data-nav="vendors"><span class="ico">◈</span> Vendors</button>
+  <button class="navlink" data-nav="gacha"><span class="ico">🎰</span> Gacha</button>
+  <div class="navsep">Ops</div>
+  <a class="navlink" href="bookings.html"><span class="ico">✉</span> <span>Bookings</span></a>
+  <button class="navlink" data-nav="sales"><span class="ico">₹</span> Sales</button>
+  <button class="navlink" data-nav="todo"><span class="ico">☑</span> To-Do</button>
+  <button class="navlink" data-nav="calculator"><span class="ico">🖩</span> Calculator</button>
+  <div class="foot">
+    <button class="navlink" data-nav="sync"><span class="ico">⇅</span> Sync &amp; Log</button>
+    <button class="navlink" id="onlineStub"><span class="ico">☁</span> <span>Online</span> <span class="chip" style="margin-left:auto">soon</span></button>
+    <button class="navlink" id="themeBtn"><span class="ico">◐</span> Theme</button>
+  </div>
+</nav>
+<main class="content">
+
+<!-- DASHBOARD -->
+<section class="view" id="v-dashboard">
+  <div class="topbar">
+    <div><h1>Dashboard</h1><div class="sub" id="dashEvent"></div></div>
+    <div class="row" style="flex:0"><button class="btn ghost w0" data-goto="event">⚡ Event Mode</button><button class="btn w0" data-goto="items">+ Item</button></div>
+  </div>
+  <div class="grid g4" id="dashStats"></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>Print Demand — top needs</h2><div id="dashDemand"></div></div>
+    <div class="card"><h2>Open To-Dos</h2><div id="dashTodos"></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Low stock (≤3 left)</h2><div id="dashLow"></div></div>
+</section>
+
+<!-- EVENT MODE -->
+<section class="view" id="v-event">
+  <div class="topbar"><div><h1>⚡ Event Mode</h1><div class="sub">Tap a tile to record a sale. Every tap writes a SaleRecord automatically.</div></div></div>
+  <div class="chanbar" id="chanBar"></div>
+  <div class="sessionline" id="sessionLine"></div>
+  <div class="tallygrid" id="tallyGrid"></div>
+</section>
+
+<!-- ITEMS -->
+<section class="view" id="v-items">
+  <div class="topbar">
+    <div><h1>Items</h1><div class="sub">Products → talent variants. Costs &amp; prices entered once on the product.</div></div>
+    <div class="row" style="flex:0"><button class="btn ghost w0" id="cloneEventBtn">Clone to new event…</button><button class="btn w0" onclick="UI.openProduct()">+ Product</button></div>
+  </div>
+  <div class="toolbar">
+    <input type="search" id="itemSearch" placeholder="Search…">
+    <div class="filters" id="catFilters"></div>
+  </div>
+  <div id="itemsList"></div>
+</section>
+
+<!-- VENDORS -->
+<section class="view" id="v-vendors">
+  <div class="topbar"><div><h1>Vendors</h1><div class="sub">Who made what.</div></div><button class="btn w0" onclick="UI.openVendor()">+ Vendor</button></div>
+  <div id="vendorsList"></div>
+</section>
+
+<!-- GACHA -->
+<section class="view" id="v-gacha">
+  <div class="topbar"><div><h1>Gacha Pools</h1><div class="sub">Filler prizes fund top-tier prizes — per-prize negative margin is expected. Solvency is judged at pool level (EV &lt; play price).</div></div>
+  <button class="btn w0" onclick="UI.openPool()">+ Pool</button></div>
+  <div id="poolsList"></div>
+</section>
+
+<!-- SALES -->
+<section class="view" id="v-sales">
+  <div class="topbar"><div><h1>Sales &amp; Profit</h1><div class="sub">Profit is computed, never typed: (price − unit cost) × qty, per channel.</div></div>
+  <button class="btn ghost w0" onclick="UI.openSale()">+ Sale record</button></div>
+  <div class="grid g4" id="salesStats" style="margin-bottom:14px"></div>
+  <div class="grid g2">
+    <div class="card"><h2>By channel</h2><div id="salesByChan"></div></div>
+    <div class="card"><h2>By item (top 10)</h2><div id="salesByItem"></div></div>
+  </div>
+  <div class="twrap" style="margin-top:14px"><table id="salesTable"></table></div>
+</section>
+
+<!-- TODO -->
+<section class="view" id="v-todo">
+  <div class="topbar"><div><h1>To-Do</h1><div class="sub">Prep tasks, ordered by due date.</div></div><button class="btn w0" onclick="UI.openTodo()">+ Task</button></div>
+  <div id="todoList"></div>
+</section>
+
+<!-- CALCULATOR -->
+<section class="view" id="v-calculator">
+  <div class="topbar"><div><h1>Cost Calculator</h1><div class="sub">Tiered quantity pricelist + add-on lines. Attach result to a product when done.</div></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Lines</h2>
+      <div id="calcLines"></div>
+      <button class="btn ghost sm" id="calcAddLine" style="margin-top:10px">+ Line</button>
+    </div>
+    <div class="card">
+      <h2>Result</h2>
+      <div id="calcResult"></div>
+      <hr class="hr">
+      <div class="row">
+        <div style="flex:2"><label>Attach to product</label><select id="calcAttach"></select></div>
+        <button class="btn w0" id="calcAttachBtn">Attach cost</button>
+      </div>
+      <p class="sub" style="margin-top:8px">Writes Base Unit Cost + Packaging Cost into the product record (overwrites — per-variant overrides are untouched).</p>
+    </div>
+  </div>
+</section>
+
+<!-- SYNC -->
+<section class="view" id="v-sync">
+  <div class="topbar"><div><h1>Sync &amp; Log</h1><div class="sub">Export / import the full database. Imports default to merge — nothing is ever silently wiped.</div></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Backup / Restore</h2>
+      <div class="row">
+        <button class="btn w0" id="exportBtn">⇩ Export JSON</button>
+        <button class="btn ghost w0" id="importBtn">⇪ Import JSON…</button>
+        <button class="btn ghost w0" id="restoreBtn">↺ Restore last backup</button>
+      </div>
+      <p class="sub" style="margin-top:10px">Backups download as <span class="num">evprod-backup-YYYY-MM-DD-HHmm.json</span>. Import shows a diff preview first; full replace needs typed confirmation.</p>
+    </div>
+    <div class="card">
+      <h2>Events</h2>
+      <div id="eventAdmin"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h2>Audit &amp; Sync Log</h2>
+    <div class="twrap"><table id="logTable"></table></div>
+  </div>
+</section>
+
+</main>
+</div>
+<div id="toast"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="assets/app.js?v=2"></script>
+
+</body>
+</html>

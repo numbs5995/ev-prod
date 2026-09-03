@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV-Prod — Packaging</title>
+<link rel="stylesheet" href="vendor/tailadmin-build.css">
+<link rel="stylesheet" href="assets/tokens.css?v=3">
+
+</head>
+<body>
+<div class="shell">
+<nav class="sidebar" id="sidebar">
+  <div class="brand">EV<span>-</span>Prod</div>
+  <a class="navlink" href="evprod.html#/dashboard"><span class="ico">◧</span> <span>Dashboard</span></a>
+  <a class="navlink" href="evprod.html#/event"><span class="ico">⚡</span> <span>Event Mode</span></a>
+  <div class="navsep">Catalog</div>
+  <a class="navlink" href="items.html"><span class="ico">▦</span> <span>Items</span></a>
+  <a class="navlink" href="evprod.html#/vendors"><span class="ico">◈</span> <span>Vendors</span></a>
+  <a class="navlink" href="evprod.html#/gacha"><span class="ico">🎰</span> <span>Gacha</span></a>
+  <button class="navlink on" data-nav="packaging"><span class="ico">📦</span> <span>Packaging</span></button>
+  <a class="navlink" href="talents.html"><span class="ico">⭐</span> <span>Talents</span></a>
+  <div class="navsep">Ops</div>
+  <a class="navlink" href="bookings.html"><span class="ico">✉</span> <span>Bookings</span></a>
+  <a class="navlink" href="evprod.html#/sales"><span class="ico">₹</span> <span>Sales</span></a>
+  <a class="navlink" href="evprod.html#/todo"><span class="ico">☑</span> <span>To-Do</span></a>
+  <a class="navlink" href="evprod.html#/calculator"><span class="ico">🖩</span> <span>Calculator</span></a>
+  <div class="foot">
+    <a class="navlink" href="evprod.html#/sync"><span class="ico">⇅</span> <span>Sync &amp; Log</span></a>
+    <a class="navlink" href="evprod.html#/sync"><span class="ico">☁</span> <span>Online</span> <span class="chip" style="margin-left:auto">soon</span></a>
+    <button class="navlink" id="themeBtn"><span class="ico">◐</span> Theme</button>
+  </div>
+</nav>
+<main class="content">
+
+<!-- PACKAGING -->
+<section class="view" id="v-packaging">
+  <div class="topbar"><div><h1>📦 Packaging</h1><div class="sub">Named pack kits — the small components that make up one unit of packaging. Kit total = Σ component × qty.</div></div>
+  <div class="row" style="flex:0"><button class="btn w0" onclick="UI.openPack()">+ Pack kit</button></div></div>
+  <div id="packsList"></div>
+</section>
+
+</main>
+</div>
+<div id="toast"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="assets/app.js?v=6"></script>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV-Prod — Bookings</title>
+<link rel="stylesheet" href="vendor/devextreme/dx.light.css">
+<link rel="stylesheet" href="vendor/tailadmin-build.css">
+<link rel="stylesheet" href="assets/tokens.css">
+
+</head>
+<body>
+<div class="shell">
+<nav class="sidebar" id="sidebar">
+  <div class="brand">EV<span>-</span>Prod</div>
+  <a class="navlink" href="evprod.html#/dashboard"><span class="ico">◧</span> Dashboard</a>
+  <a class="navlink" href="evprod.html#/event"><span class="ico">⚡</span> Event Mode</a>
+  <div class="navsep">Catalog</div>
+  <a class="navlink" href="evprod.html#/items"><span class="ico">▦</span> Items</a>
+  <a class="navlink" href="evprod.html#/vendors"><span class="ico">◈</span> Vendors</a>
+  <a class="navlink" href="evprod.html#/gacha"><span class="ico">🎰</span> Gacha</a>
+  <div class="navsep">Ops</div>
+  <button class="navlink on" data-nav="bookings"><span class="ico">✉</span> Bookings</button>
+  <a class="navlink" href="evprod.html#/sales"><span class="ico">₹</span> Sales</a>
+  <a class="navlink" href="evprod.html#/todo"><span class="ico">☑</span> To-Do</a>
+  <a class="navlink" href="evprod.html#/calculator"><span class="ico">🖩</span> Calculator</a>
+  <div class="foot">
+    <a class="navlink" href="evprod.html#/sync"><span class="ico">⇅</span> Sync &amp; Log</a>
+    <a class="navlink" href="evprod.html#/sync"><span class="ico">☁</span> Online <span class="chip" style="margin-left:auto">soon</span></a>
+    <button class="navlink" id="themeBtn"><span class="ico">◐</span> Theme</button>
+  </div>
+</nav>
+<main class="content">
+
+<!-- BOOKINGS -->
+<section class="view" id="v-bookings">
+  <div class="topbar"><div><h1>Bookings</h1><div class="sub">Pre-orders are demand, not stock — stock decrements only when fulfilled.</div></div>
+  <div class="row" style="flex:0"><button class="btn ghost w0" onclick="UI.openImport()">⇪ Import CSV/XLSX</button><button class="btn w0" onclick="UI.openBooking()">+ Booking</button></div></div>
+  <div class="toolbar" id="bookFilters"></div>
+  <div id="bookingsList"></div>
+</section>
+
+</main>
+</div>
+<div id="toast"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
+<script src="vendor/jquery-3.7.1.min.js"></script>
+<script src="vendor/devextreme/dx.all.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="assets/app.js?v=3"></script>
+
+
+<script>
+(function(){
+ function go(){
+  var v=DB.variants[0];
+  for(var i=0;i<3;i++){
+   DB.bookings.push({id:'g'+i,eventId:DB.activeEvent,customer:'Customer '+i,contact:'089980288'+i,
+    items:[{variantId:v.id,qty:1,price:135000,pack:'Dus Besar'},{variantId:DB.variants[2].id,qty:2,price:110000,pack:'Dus Kecil'}],
+    status:i%2?'paid':'pending',fulfil:'pickup',label:'',address:'Jl. Test No.'+i,shipFee:14000,notes:'',source:'s',created:new Date().toISOString()});
+  }
+  UI.bookView='dxgrid';save();render();
+ }
+ if(document.readyState==='complete')go();else window.addEventListener('load',go);
+})();
+</script></body>
+</html>

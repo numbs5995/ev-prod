@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV-Prod — Talents</title>
+<link rel="stylesheet" href="vendor/tailadmin-build.css">
+<link rel="stylesheet" href="assets/tokens.css?v=3">
+</head>
+<body>
+<div class="shell">
+<nav class="sidebar" id="sidebar">
+  <div class="brand">EV<span>-</span>Prod</div>
+  <a class="navlink" href="evprod.html#/dashboard"><span class="ico">◧</span> <span>Dashboard</span></a>
+  <a class="navlink" href="evprod.html#/event"><span class="ico">⚡</span> <span>Event Mode</span></a>
+  <div class="navsep">Catalog</div>
+  <a class="navlink" href="items.html"><span class="ico">▦</span> <span>Items</span></a>
+  <a class="navlink" href="evprod.html#/vendors"><span class="ico">◈</span> <span>Vendors</span></a>
+  <a class="navlink" href="evprod.html#/gacha"><span class="ico">🎰</span> <span>Gacha</span></a>
+  <a class="navlink" href="packaging.html"><span class="ico">📦</span> <span>Packaging</span></a>
+  <button class="navlink on" data-nav="talents"><span class="ico">⭐</span> <span>Talents</span></button>
+  <div class="navsep">Ops</div>
+  <a class="navlink" href="bookings.html"><span class="ico">✉</span> <span>Bookings</span></a>
+  <a class="navlink" href="evprod.html#/sales"><span class="ico">₹</span> <span>Sales</span></a>
+  <a class="navlink" href="evprod.html#/todo"><span class="ico">☑</span> <span>To-Do</span></a>
+  <a class="navlink" href="evprod.html#/calculator"><span class="ico">🖩</span> <span>Calculator</span></a>
+  <div class="foot">
+    <a class="navlink" href="evprod.html#/sync"><span class="ico">⇅</span> <span>Sync &amp; Log</span></a>
+    <a class="navlink" href="evprod.html#/sync"><span class="ico">☁</span> <span>Online</span> <span class="chip" style="margin-left:auto">soon</span></a>
+    <button class="navlink" id="themeBtn"><span class="ico">◐</span> Theme</button>
+  </div>
+</nav>
+<main class="content">
+
+<!-- TALENTS -->
+<section class="view on" id="v-talents">
+  <div class="topbar">
+    <div><h1>Talents</h1><div class="sub">Per-talent roster and P&amp;L for the active event. Shared / group items are excluded.</div></div>
+    <div class="row" style="flex:0"><button class="btn w0" onclick="UI.openTalent()">+ Talent</button></div>
+  </div>
+  <div class="grid g4" id="talentStats"></div>
+  <div class="card" style="margin-top:14px">
+    <h2>Roster</h2>
+    <div class="twrap">
+      <table id="talentTable">
+        <thead><tr><th>Talent</th><th>SKUs</th><th>Produced</th><th>Demand</th><th>Sold</th><th>Stock</th><th>Revenue</th><th>Prod. Cost</th><th>Net</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+<div id="toast"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="assets/app.js?v=7"></script>
+<script>
+(function(){
+  if(!location.pathname.endsWith('/talents.html')) return;
+
+  function renderTalents(){
+    const e = ev();
+    const roster = DB.talents || [];
+    const rows = roster.map(t => {
+      const variants = DB.variants.filter(v => v.talentId === t.id && pid2prod()[v.productId] && pid2prod()[v.productId].eventId === e.id);
+      if(!variants.length) return null;
+      const skus = variants.length;
+      const produced = variants.reduce((s, v) => s + producedOf(v.id), 0);
+      const demand = variants.reduce((s, v) => s + demandOf(v.id), 0);
+      const soldRecs = evList(DB.sales).filter(r => variants.some(v => v.id === r.variantId));
+      const sold = soldRecs.reduce((s, r) => s + (r.qty || 0), 0);
+      const stock = variants.reduce((s, v) => s + stockOf(v.id), 0);
+      const revenue = soldRecs.reduce((s, r) => s + (r.price || 0) * (r.qty || 0), 0);
+      const cost = variants.reduce((s, v) => s + producedOf(v.id) * costOf(v), 0);
+      return { t, skus, produced, demand, sold, stock, revenue, cost, net: revenue - cost };
+    }).filter(Boolean).sort((a, b) => b.net - a.net);
+
+    const totals = rows.reduce((acc, r) => {
+      acc.skus += r.skus; acc.produced += r.produced; acc.demand += r.demand;
+      acc.sold += r.sold; acc.stock += r.stock; acc.revenue += r.revenue; acc.cost += r.cost;
+      return acc;
+    }, { skus: 0, produced: 0, demand: 0, sold: 0, stock: 0, revenue: 0, cost: 0 });
+
+    document.getElementById('talentStats').innerHTML = `
+      <div class="stat"><div class="k">Talents</div><div class="v">${roster.length}</div></div>
+      <div class="stat"><div class="k">SKU Variants</div><div class="v">${totals.skus}</div></div>
+      <div class="stat"><div class="k">Total Sold</div><div class="v">${totals.sold}</div></div>
+      <div class="stat"><div class="k">Net Contribution</div><div class="v ${totals.revenue - totals.cost >= 0 ? 'pos' : 'neg'}">${rp(totals.revenue - totals.cost)}</div></div>`;
+
+    const tbody = document.querySelector('#talentTable tbody');
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="10" class="empty">No talents yet. Add one and assign variants in Items.</td></tr>`; return; }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><b>${esc(r.t.name)}</b>${r.t.handle ? `<br><small class="mut">${esc(r.t.handle)}</small>` : ''}</td>
+        <td class="num">${r.skus}</td>
+        <td class="num">${r.produced}</td>
+        <td class="num">${r.demand}</td>
+        <td class="num">${r.sold}</td>
+        <td class="num ${r.stock <= 3 ? 'warn' : ''}">${r.stock}</td>
+        <td class="num">${rp(r.revenue)}</td>
+        <td class="num">${rp(r.cost)}</td>
+        <td class="num ${r.revenue - r.cost >= 0 ? 'pos' : 'neg'}">${rp(r.revenue - r.cost)}</td>
+        <td style="white-space:nowrap"><button class="btn sm ghost" onclick="UI.openTalent('${r.t.id}')">Edit</button> <button class="btn sm ghost" style="color:var(--danger)" onclick="UI.delTalent('${r.t.id}')">✕</button></td>
+      </tr>`).join('');
+  }
+
+  UI.openTalent = function(id){
+    const t = id ? DB.talents.find(x => x.id === id) : { name:'', handle:'', avatar:'', notes:'', active:true };
+    openModal(`<h2>${id?'Edit':'New'} Talent</h2>
+      ${fld('Display name','<input id="f_tname" value="'+esc(t.name)+'">')}
+      <div class="row">
+        <div><label>Handle / social</label><input id="f_thandle" value="${esc(t.handle||'')}" placeholder="@handle"></div>
+        <div><label>Avatar emoji</label><input id="f_tavatar" value="${esc(t.avatar||'')}" placeholder="⭐"></div>
+      </div>
+      ${fld('Notes','<textarea id="f_tnotes" rows="2">'+esc(t.notes||'')+'</textarea>')}
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="f_tactive" ${t.active!==false?'checked':''}> Active</label>
+      <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="UI.saveTalent('${id||''}')">Save</button></div>`);
+  };
+
+  UI.saveTalent = function(id){
+    const name = document.getElementById('f_tname').value.trim();
+    if(!name){toast('Talent name required');return;}
+    const data = {
+      name,
+      handle: document.getElementById('f_thandle').value.trim(),
+      avatar: document.getElementById('f_tavatar').value.trim(),
+      notes: document.getElementById('f_tnotes').value.trim(),
+      active: document.getElementById('f_tactive').checked
+    };
+    if(id){Object.assign(DB.talents.find(x=>x.id===id), data); logAct('UPDATE_TALENT', name);}
+    else {DB.talents.push({id:uid(), ...data, created: nowISO()}); logAct('CREATE_TALENT', name);}
+    closeModal(); save(); render();
+  };
+
+  UI.delTalent = function(id){
+    if(!confirm('Delete this talent? Variants will become shared/group items.'))return;
+    DB.variants.forEach(v => { if(v.talentId === id) v.talentId = null; });
+    DB.talents = DB.talents.filter(t => t.id !== id);
+    logAct('DELETE_TALENT', id); save(); render();
+  };
+
+  window.render = function(){
+    document.querySelectorAll('.navlink[data-nav]').forEach(n => n.classList.toggle('on', n.dataset.nav === UI.view));
+    renderTalents();
+  };
+
+  applyTheme(); load(); render();
+})();
+</script>
+</body>
+</html>
