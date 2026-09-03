@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EV-Prod</title>
 <link rel="stylesheet" href="vendor/tailadmin-build.css">
-<link rel="stylesheet" href="assets/tokens.css?v=3">
+<link rel="stylesheet" href="assets/tokens.css?v=11">
 
 </head>
 <body>
@@ -37,12 +37,18 @@
 <section class="view" id="v-dashboard">
   <div class="topbar">
     <div><h1>Dashboard</h1><div class="sub" id="dashEvent"></div></div>
-    <div class="row" style="flex:0"><button class="btn ghost w0" data-goto="event">⚡ Event Mode</button><button class="btn w0" data-goto="items">+ Item</button></div>
   </div>
   <div class="grid g4" id="dashStats"></div>
   <div class="grid g2" style="margin-top:14px">
     <div class="card"><h2>Print Demand — top needs</h2><div id="dashDemand"></div></div>
     <div class="card"><h2>Open To-Dos</h2><div id="dashTodos"></div></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2>◈ Vendor Orders in Progress (To Do · Ordered · On Delivery)</h2>
+      <button class="btn sm ghost" onclick="UI.goto('vendors')">View Vendors →</button>
+    </div>
+    <div id="dashVendorOrders"></div>
   </div>
   <div class="card" style="margin-top:14px"><h2>Low stock (≤3 left)</h2><div id="dashLow"></div></div>
 </section>
@@ -138,7 +144,7 @@
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
 <script src="vendor/xlsx.full.min.js"></script>
-<script src="assets/app.js?v=6"></script>
+<script src="assets/app.js?v=10"></script>
 
 </body>
 </html>

@@ -165,3 +165,202 @@ Views (hash routes inside the single file):
 ## Status
 
 PRD v1.1 — all interview rounds settled, competitor analysis folded in, CF-21 data model verified against real data. Ready for build session.
+
+---
+
+## Design Addendum — 2026-09-04
+
+_All decisions below were settled through a structured design discussion session. These changes extend v1 and are targeted for the next implementation cycle._
+
+---
+
+### 1. Items Page — Redesign: Talent-Centric View
+
+**Change:** The Items page (`items.html`) is redesigned from a **product-centric** layout (product cards → variant rows) to a **talent-centric** layout (talent cards → variant rows per talent).
+
+- Product cost, vendor, and price remain on the Product entity; they are still visible per variant row for calculation and display purposes.
+- An **Edit Product** button is accessible per variant row, opening the existing product modal.
+- Shared / group items (variants with `talentId = null`, e.g. Sticker Pack) are grouped in a dedicated **"Shared / Group Items"** section at the bottom of the page.
+- Search and category filter chips remain functional.
+
+---
+
+### 2. Stock Breakdown Per Channel
+
+**Change:** Each variant's stock is now displayed broken down by **lot source / channel** rather than as a single aggregate number.
+
+Channel columns in the variant table: `OTS | PO | Gacha | Auction | Freebie | Dono Goal | Giveaway | Custom | Total`
+
+Stock reduction rules per channel:
+
+| Channel | Stock Added | Stock Reduced By |
+|---------|------------|-----------------|
+| OTS | Lots with source = OTS | OTS + Staff sales |
+| PO | Lots with source = PO | Booking fulfillment → PO SaleRecord |
+| Gacha | Lots with source = Gacha + stock transfers in | Gacha sales |
+| Auction | Lots with source = Auction | Auction sales |
+| Freebie | Lots with source = Freebie | Write-off at event archive |
+| Dono Goal | Lots with source = Dono Goal | Write-off at event archive |
+| Giveaway | Lots with source = Giveaway | Write-off at event archive |
+| Custom | Lots with source = Custom | Write-off at event archive |
+
+Freebie, Giveaway, and Dono Goal are **product category labels and lot sources only** — individual give-out events are not tracked per unit. Remaining Freebie/Giveaway/Dono Goal stock appears on the dashboard as an amber reminder to distribute before the event ends.
+
+**Custom Purpose stock** counts toward the total stock figure and is marked as "reserved." A free-text `purposeNotes` field is required when source = Custom.
+
+---
+
+### 3. Expanded Lot Source Values
+
+**Change:** `StockLot.source` is expanded from `['PO', 'OTS', 'Gacha', 'Giveaway']` to:
+
+```
+'PO' | 'OTS' | 'Gacha' | 'Giveaway' | 'Auction' | 'Freebie' | 'Dono Goal' | 'Custom'
+```
+
+New field added: `lot.purposeNotes` (string, only required when `source = 'Custom'`).
+
+---
+
+### 4. Stock Transfer Between Channels (Audit Trail)
+
+**Change:** Users can transfer stock between channels (e.g. reclassify 5 units from OTS to Gacha) without losing history.
+
+Mechanism: a **Transfer action** on a lot that:
+1. Reduces the source lot's qty by the transfer amount (creates a negative adjustment lot, or updates lot qty with a linked record).
+2. Creates a new lot with the target source and transferred qty.
+3. Logs a `TRANSFER_STOCK` action in the audit log with full detail (from, to, qty, reason).
+
+This preserves full traceability — the original OTS lot history is not destroyed.
+
+---
+
+### 5. Deadstock Handling
+
+**Change:** The original PRD stated leftover stock is "marked written-off (loss recorded), never re-sold automatically." This is preserved, with the following additions:
+
+- At event archive, a **Stock Opname** step is presented where the user confirms actual remaining qty per variant.
+- Remaining units are flagged as `lot.isDeadstock = true` and logged as `DEADSTOCK_WRITEOFF` (loss recorded).
+- Deadstock records **remain visible** in the event history for reference during next-cycle planning (e.g., "last event had 8 leftover Nana standees").
+- A **"Carry over → new lot"** action on deadstock records lets the user manually create a new lot in a target event, pre-filled with the deadstock qty. The user sets the new source (e.g., Gacha, Freebie). No automatic transfer.
+- `lot.deadstockCarriedTo` records the target `eventId` when a carry-over is performed.
+
+---
+
+### 6. Vendor Order Workflow — 4-Stage Status
+
+**Change:** `StockLot.status` is expanded from `['ordered', 'delivered']` to a 4-stage workflow:
+
+```
+To Do → Ordered → On Delivery → Arrived
+```
+
+Stage meanings:
+- **To Do** — order plan; user knows more stock is needed but has not yet contacted the vendor.
+- **Ordered** — order confirmed by vendor.
+- **On Delivery** — vendor has shipped.
+- **Arrived** — items received at warehouse. At this stage, `qtyDelivered` is entered manually (default = `qtyOrdered`; user adjusts for defective/missing units). Optional `defectNotes` field appears when `qtyDelivered < qtyOrdered`.
+
+Migration: existing `lot.status = 'ordered'` maps to `'todo'`; `'delivered'` maps to `'arrived'`.
+
+---
+
+### 7. Split-Vendor Production Support
+
+**Change:** A single product can be split across two different vendors for different production batches (confirmed real-world case).
+
+- `StockLot.vendorId` is added as a **required field** on every lot.
+- At lot creation, `vendorId` defaults to `product.vendorId` but is fully editable.
+- When `lot.vendorId` is null (legacy lots), the system falls back to `product.vendorId`.
+- The Vendor detail modal queries lots using effective vendor: `lot.vendorId ?? product.vendorId`.
+
+---
+
+### 8. Vendor Detail Modal
+
+**Change:** Clicking a vendor now opens a **detail modal** showing all lots/orders placed with that vendor for the active event.
+
+The modal shows: item name, lot source, qty ordered, qty delivered, current status. Each row has **Advance Status** and **Edit** actions.
+
+A **"+ New Order"** button in the vendor modal creates a new lot pre-filled with the vendor, starting at `To Do` status.
+
+Users can also create lots from the variant row ("+Lot" button), which inherits the product's vendor by default. Both entry points produce the same lot record.
+
+---
+
+### 9. Bundle Entity (New)
+
+**Overview:** Bundles are pre-defined sets of variants sold together at a special price. Bundles are available in **Bookings only** (not Event Mode, for v2).
+
+**New entity: `DB.bundles[]`**
+
+```
+id, eventId, name,
+discountMode: 'free_items' | 'discount',
+discountType: 'fixed' | 'percent',   // only when discountMode = 'discount'
+discountValue: Number,
+items: [ { variantId, qty, isFree } ],
+notes, created
+```
+
+**Pricing rules (mutually exclusive — one mode only):**
+- `free_items` mode: one or more items marked `isFree = true`; bundle price = sum of non-free item catalog prices only.
+- `discount` mode: global discount (fixed Rp or percentage) applied to the sum of **all** items' catalog prices.
+- Cannot mix free items and a discount in the same bundle.
+
+**Stock:** Bundles do not have their own stock. Effective bundle stock = `min(chanStock(variantId, 'PO'))` across all components. Stock is shared — the same variant can appear in multiple bundles simultaneously.
+
+**In Bookings:** When adding a booking item, the user can choose a variant or a bundle. A bundle booking item is stored as a single line (`bundleId` reference, qty, final bundle price). The variant breakdown is not shown in the booking list.
+
+**At Fulfillment (`fulfilBooking`):** A bundle booking item expands into one `SaleRecord` per component:
+- Free items: `SaleRecord.price = 0`; stock still consumed.
+- Discount mode: each component's price = proportional share of the final bundle price based on catalog price ratios. All component SaleRecords carry `bundleId` for grouping.
+
+**In Sales Report (Option 3):** SaleRecords tagged with a `bundleId` render as a collapsible group:
+- **Summary row:** bundle name, total qty, bundle revenue, bundle net profit.
+- **Component rows (expandable):** each variant, its prorated price, and its individual profit contribution (free items show as Rp 0 / profit = −cost).
+
+**Cross-talent bundles** (mixing variants from different talents, or including shared items) are fully supported.
+
+---
+
+### 10. Data Model Field Summary (New / Changed)
+
+| Entity | Field | Change |
+|--------|-------|--------|
+| `StockLot` | `vendorId` | NEW — required; defaults to product.vendorId |
+| `StockLot` | `source` | EXPANDED — add Auction, Freebie, Dono Goal, Custom |
+| `StockLot` | `purposeNotes` | NEW — free text; required when source = Custom |
+| `StockLot` | `status` | EXPANDED — 'todo' \| 'ordered' \| 'on-delivery' \| 'arrived' |
+| `StockLot` | `defectNotes` | NEW — optional; filled at Arrived if qtyDelivered < qtyOrdered |
+| `StockLot` | `isDeadstock` | NEW — boolean; set at event archive |
+| `StockLot` | `deadstockCarriedTo` | NEW — eventId if manually carried over |
+| `SaleRecord` | `bundleId` | NEW — null for standalone; set when from bundle fulfillment |
+| `Booking.items[]` | `bundleId` | NEW — null for standalone items |
+| `Bundle` | entire entity | NEW — see § 9 above |
+
+---
+
+### 11. Out of Scope (v2)
+
+The following were discussed and explicitly deferred:
+
+- Bundle recognition in CSV/XLSX booking import (fuzzy match on bundle name) — v3.
+- Per-unit give-out tracking for Freebie / Giveaway / Dono Goal — PRD original stance preserved (write-off at archive).
+- Bundle tiles in Event Mode — booking-only for v2.
+- End-user confirmation of proportional price allocation for bundle discounts — documented for future communication; proportional allocation is the v2 default.
+
+---
+
+### 12. Local Persistence — Python Backend (`db.json`)
+
+**Change:** Storage architecture is migrated from browser-only `localStorage` to a local Python backend (`server.py`) writing directly to a `db.json` file on disk.
+
+**Problem Addressed:** `localStorage` is vulnerable to browser cache clearance, incognito isolation, and browser switching. Storing the database in a local `db.json` file guarantees reliable persistence, file portability, easy backups, and consistent access across any browser on the machine.
+
+**Architecture & Behavior:**
+- **Backend:** Lightweight Python 3 Flask server (`server.py`) serving endpoints `GET /db` and `PUT /db` (atomic writes via temporary files to avoid write corruption).
+- **Single Source of Truth:** Data is strictly loaded from and saved to `db.json`. There is **no dual-write or silent fallback to `localStorage` for data**, preventing silent data drift or split state.
+- **Client Save Pattern:** The client keeps mutations responsive with an in-memory DB and a debounced (50ms) asynchronous save queue (`PUT /db`).
+- **Server Offline Handling:** If the client cannot connect to the Python backend on initial load, a full-screen blocking error is displayed with instructions to start the server via `start.bat` (Windows) or `./start.sh` (Mac/Linux).
+- **Scoped `localStorage` Use:** `localStorage` is exclusively retained for non-critical UI preferences (`LS_THEME` for dark/light mode and `LS_CHAN` for active tally channel selection), never for entity data.

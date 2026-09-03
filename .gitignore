@@ -1,2 +1,30 @@
+# Node / NPM
 node_modules/
 .cdp-*/
+
+# Local database & temporary files
+db.json
+*.tmp
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

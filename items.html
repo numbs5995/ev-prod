@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EV-Prod — Items</title>
 <link rel="stylesheet" href="vendor/tailadmin-build.css">
-<link rel="stylesheet" href="assets/tokens.css?v=3">
+<link rel="stylesheet" href="assets/tokens.css?v=12">
 
 </head>
 <body>
@@ -36,9 +36,14 @@
 <!-- ITEMS -->
 <section class="view" id="v-items">
   <div class="topbar">
-    <div><h1>Items</h1><div class="sub">Products → talent variants. Costs &amp; prices entered once on the product.</div></div>
-    <div class="row" style="flex:0"><button class="btn ghost w0" id="cloneEventBtn">Clone to new event…</button><button class="btn w0" onclick="UI.openProduct()">+ Product</button></div>
+    <div><h1>Items</h1><div class="sub">Talent-centric view — stock breakdown by channel (OTS, PO, Gacha, Auction, Other).</div></div>
+    <div class="row" style="flex:0">
+      <button class="btn ghost w0" id="bundleToggleBtn" onclick="UI.toggleBundleView()">🎁 Bundles</button>
+      <button class="btn ghost w0" id="cloneEventBtn">Clone to new event…</button>
+      <button class="btn w0" onclick="UI.openProduct()">+ Product</button>
+    </div>
   </div>
+  <div id="bundlesSection" style="display:none;margin-bottom:16px"></div>
   <div class="toolbar">
     <input type="search" id="itemSearch" placeholder="Search…">
     <div class="filters" id="catFilters"></div>
@@ -52,7 +57,7 @@
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
 <script src="vendor/xlsx.full.min.js"></script>
-<script src="assets/app.js?v=7"></script>
+<script src="assets/app.js?v=11"></script>
 
 </body>
 </html>

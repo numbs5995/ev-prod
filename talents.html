@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EV-Prod — Talents</title>
 <link rel="stylesheet" href="vendor/tailadmin-build.css">
-<link rel="stylesheet" href="assets/tokens.css?v=3">
+<link rel="stylesheet" href="assets/tokens.css?v=11">
 </head>
 <body>
 <div class="shell">
@@ -56,7 +56,7 @@
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
 <script src="vendor/xlsx.full.min.js"></script>
-<script src="assets/app.js?v=7"></script>
+<script src="assets/app.js?v=10"></script>
 <script>
 (function(){
   if(!location.pathname.endsWith('/talents.html')) return;
@@ -64,7 +64,7 @@
   function renderTalents(){
     const e = ev();
     const roster = DB.talents || [];
-    const rows = roster.map(t => {
+    let rows = roster.map(t => {
       const variants = DB.variants.filter(v => v.talentId === t.id && pid2prod()[v.productId] && pid2prod()[v.productId].eventId === e.id);
       if(!variants.length) return null;
       const skus = variants.length;
@@ -90,9 +90,50 @@
       <div class="stat"><div class="k">Total Sold</div><div class="v">${totals.sold}</div></div>
       <div class="stat"><div class="k">Net Contribution</div><div class="v ${totals.revenue - totals.cost >= 0 ? 'pos' : 'neg'}">${rp(totals.revenue - totals.cost)}</div></div>`;
 
+    // Search & Filter
+    const q = (UI.talentQ||'').toLowerCase().trim();
+    const filter = UI.talentFilter||'';
+
+    if(q){
+      rows = rows.filter(r => (r.t.name + ' ' + (r.t.handle||'') + ' ' + (r.t.notes||'')).toLowerCase().includes(q));
+    }
+    if(filter === 'active'){
+      rows = rows.filter(r => r.t.active !== false);
+    } else if(filter === 'inactive'){
+      rows = rows.filter(r => r.t.active === false);
+    }
+
+    const perPage = UI.talentPerPage || 10;
+    const pages = Math.max(1, Math.ceil(rows.length / perPage));
+    if(UI.talentPage > pages) UI.talentPage = pages;
+    const paged = rows.slice((UI.talentPage-1)*perPage, UI.talentPage*perPage);
+
+    // Filter bar above roster table
+    let barEl = document.getElementById('talentFilterBar');
+    if(!barEl){
+      barEl = document.createElement('div');
+      barEl.id = 'talentFilterBar';
+      barEl.style.cssText = 'display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap';
+      document.querySelector('#talentTable').parentElement.before(barEl);
+    }
+    barEl.innerHTML = `<input type="search" placeholder="Search talents…" style="max-width:240px" value="${esc(UI.talentQ||'')}" oninput="UI.talentQ=this.value;UI.talentPage=1;renderTalents()">
+      <div class="filters">
+        <button class="fbtn ${!filter?'on':''}" onclick="UI.talentFilter='';UI.talentPage=1;renderTalents()">All</button>
+        <button class="fbtn ${filter==='active'?'on':''}" onclick="UI.talentFilter='active';UI.talentPage=1;renderTalents()">Active</button>
+        <button class="fbtn ${filter==='inactive'?'on':''}" onclick="UI.talentFilter='inactive';UI.talentPage=1;renderTalents()">Inactive</button>
+      </div>`;
+
+    let pagerWrap = document.getElementById('talentPagerWrap');
+    if(!pagerWrap){
+      pagerWrap = document.createElement('div');
+      pagerWrap.id = 'talentPagerWrap';
+      document.querySelector('#talentTable').parentElement.after(pagerWrap);
+    }
+    pagerWrap.innerHTML = UI.buildPager(UI.talentPage, rows.length, perPage, 'UI.setTalentPage', 'UI.setTalentPerPage');
+
     const tbody = document.querySelector('#talentTable tbody');
-    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="10" class="empty">No talents yet. Add one and assign variants in Items.</td></tr>`; return; }
-    tbody.innerHTML = rows.map(r => `
+    if (!paged.length) { tbody.innerHTML = `<tr><td colspan="10" class="empty">No matching talents found.</td></tr>`; return; }
+    tbody.innerHTML = paged.map(r => `
       <tr>
         <td><b>${esc(r.t.name)}</b>${r.t.handle ? `<br><small class="mut">${esc(r.t.handle)}</small>` : ''}</td>
         <td class="num">${r.skus}</td>
@@ -107,17 +148,29 @@
       </tr>`).join('');
   }
 
+  UI.setTalentPage = function(p){ UI.talentPage = p; renderTalents(); };
+  UI.setTalentPerPage = function(n){ UI.talentPerPage = n; UI.talentPage = 1; renderTalents(); };
+
   UI.openTalent = function(id){
     const t = id ? DB.talents.find(x => x.id === id) : { name:'', handle:'', avatar:'', notes:'', active:true };
     openModal(`<h2>${id?'Edit':'New'} Talent</h2>
-      ${fld('Display name','<input id="f_tname" value="'+esc(t.name)+'">')}
       <div class="row">
-        <div><label>Handle / social</label><input id="f_thandle" value="${esc(t.handle||'')}" placeholder="@handle"></div>
-        <div><label>Avatar emoji</label><input id="f_tavatar" value="${esc(t.avatar||'')}" placeholder="⭐"></div>
+        <div style="flex:2.2">${fld('Display name','<input id="f_tname" value="'+esc(t.name)+'" placeholder="e.g. Nana">')}</div>
+        <div style="flex:1">${fld('Avatar emoji','<input id="f_tavatar" value="'+esc(t.avatar||'')+'" placeholder="⭐" style="text-align:center">')}</div>
       </div>
-      ${fld('Notes','<textarea id="f_tnotes" rows="2">'+esc(t.notes||'')+'</textarea>')}
-      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="f_tactive" ${t.active!==false?'checked':''}> Active</label>
-      <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="UI.saveTalent('${id||''}')">Save</button></div>`);
+      ${fld('Handle / Social','<input id="f_thandle" value="${esc(t.handle||'')}" placeholder="@twitter_or_ig">')}
+      ${fld('Notes','<textarea id="f_tnotes" rows="3" placeholder="Optional notes or bio">'+esc(t.notes||'')+'</textarea>')}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">
+        <label class="custom-checkbox">
+          <input type="checkbox" class="checkbox-input" id="f_tactive" ${t.active!==false?'checked':''}>
+          <span class="checkbox-box sm"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span class="checkbox-text">Active Talent</span>
+        </label>
+        <div class="actions" style="margin-top:0">
+          <button class="btn ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn" onclick="UI.saveTalent('${id||''}')">Save Talent</button>
+        </div>
+      </div>`, 'sm');
   };
 
   UI.saveTalent = function(id){

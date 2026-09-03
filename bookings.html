@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EV-Prod — Bookings</title>
 <link rel="stylesheet" href="vendor/tailadmin-build.css">
-<link rel="stylesheet" href="assets/tokens.css?v=3">
+<link rel="stylesheet" href="assets/tokens.css?v=12">
 
 </head>
 <body>
@@ -36,7 +36,10 @@
 <!-- BOOKINGS -->
 <section class="view" id="v-bookings">
   <div class="topbar"><div><h1>Bookings</h1><div class="sub">Pre-orders are demand, not stock — stock decrements only when fulfilled.</div></div>
-  <div class="row" style="flex:0"><button class="btn ghost w0" onclick="UI.openImport()">⇪ Import CSV/XLSX</button><button class="btn w0" onclick="UI.openBooking()">+ Booking</button></div></div>
+  <div class="row" style="flex:0">
+    <button class="btn ghost w0" onclick="UI.openImport()">⇪ Import CSV/XLSX</button>
+    <button class="btn w0" onclick="UI.openBooking()">+ Booking</button>
+  </div></div>
   <div class="toolbar" id="bookFilters"></div>
   <div id="bookingsList"></div>
 </section>
@@ -47,7 +50,7 @@
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <input type="file" id="filePick" accept=".json,.csv,.xlsx,.xls" style="display:none">
 <script src="vendor/xlsx.full.min.js"></script>
-<script src="assets/app.js?v=6"></script>
+<script src="assets/app.js?v=11"></script>
 
 </body>
 </html>
